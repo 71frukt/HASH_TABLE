@@ -1,0 +1,16 @@
+{
+    "cSpell.words": [
+        "capa"
+    ],
+    "files.associations": {
+        "array": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "list": "cpp",
+        "vector": "cpp",
+        "chrono": "cpp",
+        "variant": "cpp"
+    }
+}
