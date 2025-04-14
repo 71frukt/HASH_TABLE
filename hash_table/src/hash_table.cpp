@@ -12,6 +12,7 @@ HashTableFuncRes HashTableCtor(HashTable *hash_table, size_t buckets_count, size
     hash_table->load_factor = load_factor;
 
     hash_table->buckets = (list_t *) calloc(buckets_count, sizeof(list_t));
+
     if (hash_table->buckets == NULL)
     {
         fprintf(stderr, "error in calloc hash_table->buckets\n");
@@ -20,10 +21,10 @@ HashTableFuncRes HashTableCtor(HashTable *hash_table, size_t buckets_count, size
 
     for (size_t i = 0; i < buckets_count; i++)
     {
-        ListCtor(hash_table->buckets + i, load_factor, sizeof(BucketItem));
+        ListCtor(&hash_table->buckets[i], load_factor, sizeof(BucketItem));
     }
     
-    HASH_TABLE_VERIFY(hash_table);
+    // HASH_TABLE_VERIFY(hash_table);
     return HASH_FUNC_OK;
 }
 
@@ -31,8 +32,10 @@ HashTableFuncRes HashTableDtor(HashTable *hash_table)
 {
     for (size_t i = 0; i < hash_table->buckets_count; i++)
     {
-        ListDtor(hash_table->buckets + i);
+        ListDtor(&hash_table->buckets[i]);
     }
+
+    free(hash_table->buckets);
 
     hash_table->buckets_count = 0;
     hash_table->load_factor = 0;
@@ -114,3 +117,4 @@ char SkipSpaces(FILE *file)     // returns first read alpha (or EOF) letter
 
     return c;
 }
+

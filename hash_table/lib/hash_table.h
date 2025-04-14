@@ -4,8 +4,8 @@
 #include <stdio.h>
 
 #include "list.h"
-#include "console_color.h"
-
+#include "text_color.h"
+#include "logger.h"
 
 #define STR_HELPER(x) #x  
 #define STR(x) STR_HELPER(x)
@@ -41,20 +41,20 @@ HashTableFuncRes HashTableDtor   (HashTable *hash_table);
 HashTableFuncRes LoadHashTable   (HashTable *hash_table, FILE *source);
 BucketItem *     GetOrCreateItem (HashTable *hash_table, const char *const word);
 
+const char *     GetHashTableItemVal(void *item);
+
 char SkipSpaces(FILE *file);     // returns first read alpha (or EOF) letter
 
 size_t HashFunc(const char *const str);
 
 
-
-#define ERROR_HANDLER(hash_table_func) do                                                                   \
-{                                                                                                            \
-    HashTableFuncRes func_res = hash_table_func;                                                              \
-    if (func_res != HASH_FUNC_OK)                                                                              \
-    {                                                                                                           \
-        fprintf(stderr, COLORED("failed " #hash_table_func, RED) " called in " COLORED("%s:%d (%s)\n", CYAN),    \
-                __FILE__, __LINE__, __func__);                                                                    \
-    }                                                                                                              \
+#define ERROR_HANDLER(hash_table_func) do                                                                                   \
+{                                                                                                                            \
+    HashTableFuncRes func_res = hash_table_func;                                                                              \
+    if (func_res != HASH_FUNC_OK)                                                                                              \
+    {                                                                                                                           \
+        log(ERROR, "Failed " #hash_table_func);                                                                          \
+    }                                                                                                                             \
 } while (0)
 
 #endif

@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <string.h>
+
 #include "hash_table.h"
 #include "hash_table_debug.h"
+#include "logger.h"
 
 HashTableVerifyCode HashTableVerify(HashTable *hash_table)
 {
@@ -39,23 +42,154 @@ fprintf(stderr, "IN VERIFY\n");
     return HASH_TABLE_OK;
 }
 
-void PrintHashTableErrors(int error, FILE *dest)
+char *GetHashTableErrors(int error, FILE *dest)
 {
-    #define PRINT_ERROR_PART(full_err, cmp_err)         \
-        if (full_err & cmp_err) fprintf(dest, #cmp_err);
+    static char error_str[ERROR_STR_MAX_SIZE];
+    size_t error_str_cursor = 0;
 
+    #define PRINT_ERROR_PART(full_err, cmp_err)                                         \
+        if (full_err & cmp_err)                                                          \
+        {                                                                                 \
+            strncpy(error_str, #cmp_err, ERROR_STR_MAX_SIZE - error_str_cursor - 1);       \
+            error_str_cursor += strlen(#cmp_err);                                           \
+                                                                                             \
+            if (error_str_cursor == ERROR_STR_MAX_SIZE)                                       \
+                log(WARNING, "error_str overflow");                                   \
+        }
+        
     PRINT_ERROR_PART(error, HASH_TABLE_PTR_ERR);
     PRINT_ERROR_PART(error, HASH_TABLE_BUCKETS_PTR_ERR);
     PRINT_ERROR_PART(error, HASH_TABLE_ACCORDANCE_ERR);
 
-    fprintf(dest, "\n\n");
+    fprintf(stderr, "res_error = %s\n", error_str);
+
+    return error_str;
 
     #undef PRINT_ERROR_PART
 }
 
 
-
 void HashTableDump(HashTable *hash_table)
 {
+    log(DUMP, "HASH TABLE DUMP");
 
+    log(INFO, "Hash table [%p]\n", hash_table);
+    log(INFO, "{\n");
+
+    log(INFO, "\tbuckets_count = %ld\n",   hash_table->buckets_count);    
+    log(INFO, "\tload_factor   = %ld\n\n", hash_table->load_factor  );    
+    
+    log(INFO, "\tBuckets:\n");    
+
+    for (size_t i = 0; i < hash_table->buckets_count; i++)
+    {
+        log(INFO, "\tBucket %ld:\n", i);
+        BucketDump(hash_table->buckets + i);
+    }
+    
+    log(INFO, "}\n");
+}
+
+void BucketDump(list_t *bucket)
+{
+    lassert(bucket, "bucket == NULL");
+
+    // log(INFO, "bucket[%p]:   ", bucket);
+
+    int num = bucket->head;
+
+    while (num != 0)
+    {
+        void *item = (char *) bucket->data + num * bucket->item_size;
+        const char *item_val = GetHashTableItemVal(item);
+
+        log(INFO, "%s ", item_val);
+        num = bucket->next[num];
+    } 
+
+    // table
+    log(INFO, "\n<table border width = \"85%%\"style=\"margin-left: 3%%\">\n");
+
+    log(INFO, "<tr>\n");
+    log(INFO, "<td>index</td>");
+
+    for (int i = 0; i < bucket->capacity; i++)
+    {
+        log(INFO, "<td>%d</td>", i);
+    }
+
+    log(INFO, "</tr>\n");
+
+    // data
+    log(INFO, "<tr>\n");
+
+    log(INFO, "<td>data [%p]:</td>", bucket->data);
+
+    log(INFO, "\t");
+
+    for (int i = 0; i < bucket->capacity; i++)
+    {
+        log(INFO, "<td>");
+
+        void *item = (char *) bucket->data + num * bucket->item_size;
+        const char *item_val = GetHashTableItemVal(item);
+
+        log(INFO, "'%s'", item_val);
+
+        log(INFO, "</td>\n");   
+    }
+
+    log(INFO, "</tr>\n");
+
+    // next
+    log(INFO, "<tr>\n");
+
+    log(INFO, "<td>next [%p]:</td>", bucket->next);
+
+    log(INFO, "\t");
+
+    for (int i = 0; i < bucket->capacity; i++)
+    {
+        log(INFO, "<td>");
+
+        if (bucket->next[i] == NEXT_POISON)
+            log(INFO, "NX# ");
+
+        if (bucket->next[i] == END_OF_FREE)
+            log(INFO, END_OF_FREE_MARK);
+
+        else
+            log(INFO, "%3d ", bucket->next[i]);
+
+        log(INFO, "</td>\n");
+    }
+
+    log(INFO, "</tr>\n");
+
+    // prev
+    log(INFO, "<tr>\n");
+
+    log(INFO, "<td>prev [%p]:</td>", bucket->prev);
+
+    log(INFO, "\t");
+
+    for (int i = 0; i < bucket->capacity; i++)
+    {
+        log(INFO, "<td>");
+
+        if (bucket->prev[i] == PREV_POISON)
+            log(INFO, "PR# ");
+
+        else
+            log(INFO, "%3d ", bucket->prev[i]);
+
+        log(INFO, "</td>\n");
+    }
+}
+
+
+const char *GetHashTableItemVal(void *item)
+{
+    BucketItem *bucket_item = (BucketItem *) item;
+    return bucket_item->word;
 }

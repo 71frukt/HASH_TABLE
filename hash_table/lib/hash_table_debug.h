@@ -2,6 +2,7 @@
 #define HASH_TABLE_DEBUG_H
 
 #include "hash_table.h"
+#include "logger.h"
 
 enum HashTableVerifyCode
 {
@@ -14,24 +15,26 @@ enum HashTableVerifyCode
 
 HashTableVerifyCode HashTableVerify(HashTable *hash_table);
 
-void PrintHashTableErrors(int error, FILE *dest);
+void HashTableDump (HashTable *hash_table);
+void BucketDump    (list_t *bucket);
 
+
+const size_t ERROR_STR_MAX_SIZE = 300;
+char *GetHashTableErrors(int error, FILE *dest);
 
 #ifdef HASH_TABLE_DEBUG
 
-#define HASH_TABLE_VERIFY(hash_table) do                                                                    \
-{                                                                                                            \
-    HashTableVerifyCode verify_code = HashTableVerify(hash_table);                                            \
-                                                                                                               \
-    if (verify_code != HASH_TABLE_OK)                                                                           \
-    {                                                                                                            \
-        fprintf(stderr, COLORED("VERIFICATION FAILED", RED) " in " COLORED("%s:%d (%s) \n", CYAN) "errors:\n",    \
-                __FILE__, __LINE__, __func__);                                                                     \
-                                                                                                                    \
-        PrintHashTableErrors(verify_code, stderr);                                                                   \
-        return HASH_FUNC_FAIL;                                                                                        \
-    }                                                                                                                  \
-                                                                                                                        \
+#define HASH_TABLE_VERIFY(hash_table) do                                                                                                        \
+{                                                                                                                                                \
+    HashTableVerifyCode verify_code = HashTableVerify(hash_table);                                                                                \
+                                                                                                                                                   \
+    if (verify_code != HASH_TABLE_OK)                                                                                                               \
+    {                                                                                                                                                \
+        const char *const errors = GetHashTableErrors(verify_code, stderr);                                                                           \
+        log(ERROR, "HASH_TABLE_VERIFY failed! Errors:\n %s\n", errors);                                                                         \
+        return HASH_FUNC_FAIL;                                                                                                                          \
+    }                                                                                                                                                    \
+                                                                                                                                                          \
 } while(0)
 
 #else

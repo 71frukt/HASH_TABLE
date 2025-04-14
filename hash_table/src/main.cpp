@@ -1,26 +1,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "list.h"
+
 #include "hash_table.h"
+#include "hash_table_debug.h"
+#include "list.h"
+#include "logger.h"
 
 int main()
 {
     fprintf(stderr, "START\n\n");
 
+    logctor();
+
+    // list_t list = {};
+    // ListCtor(&list, 10, 4, GetHashTableItemVal);
+
+    // LIST_ASSERT(&list);
+
+    // ListDtor(&list);
+
     HashTable hash_table = {};
     ERROR_HANDLER(HashTableCtor(&hash_table, BUCKETS_COUNT, 10));
-
-    // const char *const word = "SOSAL!";
-    // 
-    // BucketItem *item = GetOrCreateItem(&hash_table, word);
-// 
-    // fprintf(stderr, "AAA = '%s'\n", item->word);
-
+    
     FILE *source = fopen("hash_table/build/source.txt", "r");
-    ERROR_HANDLER(LoadHashTable(&hash_table, source));
 
+    HashTableDump(&hash_table);
+
+    // ERROR_HANDLER(LoadHashTable(&hash_table, source));    
+    
     ERROR_HANDLER(HashTableDtor(&hash_table));
+    fclose(source);
 
     fprintf(stderr, "END\n\n");
 

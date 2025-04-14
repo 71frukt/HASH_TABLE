@@ -11,6 +11,11 @@
         "list": "cpp",
         "vector": "cpp",
         "chrono": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "format": "cpp",
+        "thread": "cpp",
+        "*.tcc": "cpp",
+        "cmath": "cpp",
+        "random": "cpp"
     }
 }
