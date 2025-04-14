@@ -83,7 +83,7 @@ BucketItem *GetOrCreateItem(HashTable *hash_table, const char *const word)
     int item_index = bucket->head;
     do
     {
-        BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);  //  bucket->data[item_index];
+        BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
         if (strcmp(word, item->word) == 0)
         {
@@ -101,7 +101,6 @@ BucketItem *GetOrCreateItem(HashTable *hash_table, const char *const word)
     new_item.val = 1;
 
     ListPasteTail(bucket, &new_item);
-    
     return (BucketItem *) ListGetItem(bucket, item_index);
 }
 

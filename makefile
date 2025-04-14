@@ -1,5 +1,5 @@
-USE_GDB    		 ?= false
-HASH_TABLE_DEBUG ?= true
+USE_GDB    		 ?= true
+HASH_TABLE_DEBUG ?= false
 LIST_DEBUG	     ?= false
 USE_LOGS		 ?= true
 

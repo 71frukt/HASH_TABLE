@@ -15,18 +15,28 @@ fprintf(stderr, "IN VERIFY\n");
     if (hash_table->buckets == NULL)
         return HASH_TABLE_BUCKETS_PTR_ERR;
 
+    if (CheckHashTableAccordance(hash_table) == HASH_TABLE_ACCORDANCE_ERR)
+        return HASH_TABLE_ACCORDANCE_ERR;
+
+    return HASH_TABLE_OK;
+}
+
+
+HashTableVerifyCode CheckHashTableAccordance(HashTable *hash_table)
+{
     for (size_t bucket_num = 0; bucket_num < hash_table->buckets_count; bucket_num++)
     {
         list_t *cur_bucket = hash_table->buckets + bucket_num;
         int item_index = cur_bucket->head;
 
-        if (item_index == 0)    // free bucket
+        if (cur_bucket->tail == cur_bucket->head)    // free bucket
             continue;
 
         do
         {
             BucketItem *cur_item   = (BucketItem*) ListGetItem(cur_bucket, item_index);
             char *cur_word         = cur_item->word;
+
             BucketItem *found_item = (BucketItem*)  GetOrCreateItem(hash_table, cur_word);
             
             fprintf(stderr, "ver word = '%s', item_index = %d, bucket_num = %ld, buckets_count = %ld\n", cur_word, item_index, bucket_num, hash_table->buckets_count);
@@ -41,6 +51,7 @@ fprintf(stderr, "IN VERIFY\n");
 
     return HASH_TABLE_OK;
 }
+
 
 char *GetHashTableErrors(int error, FILE *dest)
 {
@@ -61,8 +72,6 @@ char *GetHashTableErrors(int error, FILE *dest)
     PRINT_ERROR_PART(error, HASH_TABLE_BUCKETS_PTR_ERR);
     PRINT_ERROR_PART(error, HASH_TABLE_ACCORDANCE_ERR);
 
-    fprintf(stderr, "res_error = %s\n", error_str);
-
     return error_str;
 
     #undef PRINT_ERROR_PART
@@ -71,7 +80,7 @@ char *GetHashTableErrors(int error, FILE *dest)
 
 void HashTableDump(HashTable *hash_table)
 {
-    log(DUMP, "HASH TABLE DUMP");
+    log(DUMP, "");
 
     log(INFO, "Hash table [%p]\n", hash_table);
     log(INFO, "{\n");
@@ -79,15 +88,13 @@ void HashTableDump(HashTable *hash_table)
     log(INFO, "\tbuckets_count = %ld\n",   hash_table->buckets_count);    
     log(INFO, "\tload_factor   = %ld\n\n", hash_table->load_factor  );    
     
-    log(INFO, "\tBuckets:\n");    
-
     for (size_t i = 0; i < hash_table->buckets_count; i++)
     {
         log(INFO, "\tBucket %ld:\n", i);
         BucketDump(hash_table->buckets + i);
     }
     
-    log(INFO, "}\n");
+    log(INFO, "}\n\n\n");
 }
 
 void BucketDump(list_t *bucket)
@@ -97,15 +104,6 @@ void BucketDump(list_t *bucket)
     // log(INFO, "bucket[%p]:   ", bucket);
 
     int num = bucket->head;
-
-    while (num != 0)
-    {
-        void *item = (char *) bucket->data + num * bucket->item_size;
-        const char *item_val = GetHashTableItemVal(item);
-
-        log(INFO, "%s ", item_val);
-        num = bucket->next[num];
-    } 
 
     // table
     log(INFO, "\n<table border width = \"85%%\"style=\"margin-left: 3%%\">\n");
@@ -123,18 +121,16 @@ void BucketDump(list_t *bucket)
     // data
     log(INFO, "<tr>\n");
 
-    log(INFO, "<td>data [%p]:</td>", bucket->data);
-
-    log(INFO, "\t");
+    log(INFO, "<td>data [%p]:</td>\n", bucket->data);
 
     for (int i = 0; i < bucket->capacity; i++)
     {
         log(INFO, "<td>");
 
-        void *item = (char *) bucket->data + num * bucket->item_size;
+        void *item = ListGetItem(bucket, i); // (char *) bucket->data + num * bucket->item_size;
         const char *item_val = GetHashTableItemVal(item);
 
-        log(INFO, "'%s'", item_val);
+        log(INFO, "%s", item_val);
 
         log(INFO, "</td>\n");   
     }
@@ -144,9 +140,7 @@ void BucketDump(list_t *bucket)
     // next
     log(INFO, "<tr>\n");
 
-    log(INFO, "<td>next [%p]:</td>", bucket->next);
-
-    log(INFO, "\t");
+    log(INFO, "<td>next [%p]:</td>\n", bucket->next);
 
     for (int i = 0; i < bucket->capacity; i++)
     {
@@ -169,9 +163,7 @@ void BucketDump(list_t *bucket)
     // prev
     log(INFO, "<tr>\n");
 
-    log(INFO, "<td>prev [%p]:</td>", bucket->prev);
-
-    log(INFO, "\t");
+    log(INFO, "<td>prev [%p]:</td>\n", bucket->prev);
 
     for (int i = 0; i < bucket->capacity; i++)
     {
@@ -185,11 +177,18 @@ void BucketDump(list_t *bucket)
 
         log(INFO, "</td>\n");
     }
+
+    log(INFO, "</table>\n\n");
 }
 
 
 const char *GetHashTableItemVal(void *item)
 {
+    static char item_val[ITEM_NAME_LEN] = {};
+
     BucketItem *bucket_item = (BucketItem *) item;
-    return bucket_item->word;
+    
+    snprintf(item_val, ITEM_NAME_LEN - 1, "'%s' (%ld)", bucket_item->word, bucket_item->val);
+
+    return item_val;
 }
