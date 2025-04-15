@@ -35,11 +35,12 @@ enum HashTableFuncRes
 };
 
 
-HashTableFuncRes HashTableCtor   (HashTable *hash_table, size_t buckets_count, size_t load_factor);
-HashTableFuncRes HashTableDtor   (HashTable *hash_table);
+HashTableFuncRes HashTableCtor (HashTable *hash_table, size_t buckets_count, size_t load_factor);
+HashTableFuncRes HashTableDtor (HashTable *hash_table);
 
-HashTableFuncRes LoadHashTable   (HashTable *hash_table, FILE *source);
-BucketItem *     GetOrCreateItem (HashTable *hash_table, const char *const word);
+HashTableFuncRes LoadHashTable (HashTable *hash_table, FILE *source);
+BucketItem *     LoadItem      (HashTable *hash_table, const char *const word);
+BucketItem *     FindItem      (HashTable *hash_table, const char *const word);
 
 const char *     GetHashTableItemVal(void *item);
 

@@ -18,9 +18,11 @@ int main()
     
     FILE *source = fopen("hash_table/build/source.txt", "r");
 
+    HASH_TABLE_DUMP(&hash_table);
+
     ERROR_HANDLER(LoadHashTable(&hash_table, source));    
     
-    HashTableDump(&hash_table);
+    HASH_TABLE_DUMP(&hash_table);
 
     ERROR_HANDLER(HashTableDtor(&hash_table));
     fclose(source);

@@ -1,12 +1,18 @@
-USE_GDB    		 ?= true
+USE_GDB    		 ?= false
+USE_ASAN		 ?= false
+USE_VALGRIND	 ?= false
+
 HASH_TABLE_DEBUG ?= false
 LIST_DEBUG	     ?= false
 USE_LOGS		 ?= true
 
 CXX         =  g++
-OPT_FLAGS   =  -mavx2 -pg -g
+OPT_FLAGS   =  -mavx2
 OPT_LEVEL   ?= -O3
 CXXFLAGS    =  -Wall -Wextra -std=c++17 $(OPT_FLAGS) $(OPT_LEVEL)
+
+ASAN_FLAGS	   = -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr
+VALGRIND_FLAGS = --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes
 
 # Пути к исходным файлам и библиотекам
 HASH_SRC_DIR   = hash_table/src
@@ -46,10 +52,15 @@ LDFLAGS  = -D _DEBUG -ggdb3 -std=c++17 -Wall -Wextra -Weffc++ -Waggressive-loop-
  -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=2 -Wsuggest-attribute=noreturn -Wsuggest-final-methods -Wsuggest-final-types -Wsuggest-override -Wswitch-default            \
  -Wswitch-enum -Wsync-nand -Wundef -Wunreachable-code -Wunused -Wuseless-cast -Wvariadic-macros -Wno-literal-suffix -Wno-missing-field-initializers -Wno-narrowing                  \
  -Wno-old-style-cast -Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation -fstack-protector -fstrict-overflow -flto-odr-type-merging -fno-omit-frame-pointer              \
- -Wlarger-than=81920 -Wstack-usage=81920 -pie -fPIE -Werror=vla  -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr \
+ -Wlarger-than=81920 -Wstack-usage=81920 -pie -fPIE -Werror=vla
 
-ifeq ($(USE_GDB), true)
-	LDFLAGS += -g
+
+ifneq ($(filter true,$(USE_GDB) $(USE_ASAN) $(USE_VALGRIND)),)
+    LDFLAGS += -g
+endif
+
+ifneq ($(USE_VALGRIND), true)
+	LDFLAGS += $(ASAN_FLAGS)
 endif
 
 ifeq ($(HASH_TABLE_DEBUG), true)
@@ -74,6 +85,9 @@ run:
 gdb:
 	gdb $(TARGET)
 
+callgrind:
+	valgrind $(VALGRIND_FLAGS) $(TARGET)
+
 $(TARGET): $(HASH_OBJ_CPP) $(LIST_OBJ_CPP) $(LOGS_OBJ_CPP) | $(BUILD_DIR)
 	$(CXX) $(HASH_OBJ_CPP) $(LIST_OBJ_CPP) $(LOGS_OBJ_CPP) -o $@ $(LDFLAGS)
 
@@ -81,7 +95,7 @@ $(HASH_OBJ_DIR)/%.o: $(HASH_SRC_DIR)/%.cpp | $(HASH_OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -I$(HASH_LIB_DIR) -I$(LIST_LIB_DIR) -I$(LOGS_LIB_DIR) -c $< -o $@
 
 $(LIST_OBJ_DIR)/%.o: $(LIST_SRC_DIR)/%.cpp | $(LIST_OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -I$(LIST_LIB_DIR) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -I$(LIST_LIB_DIR) -I$(LOGS_LIB_DIR) -c $< -o $@
 
 $(LOGS_OBJ_DIR)/%.o: $(LOGS_SRC_DIR)/%.cpp | $(LOGS_OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -I$(LOGS_LIB_DIR) -c $< -o $@

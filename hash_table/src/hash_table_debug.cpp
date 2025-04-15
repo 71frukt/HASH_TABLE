@@ -37,7 +37,7 @@ HashTableVerifyCode CheckHashTableAccordance(HashTable *hash_table)
             BucketItem *cur_item   = (BucketItem*) ListGetItem(cur_bucket, item_index);
             char *cur_word         = cur_item->word;
 
-            BucketItem *found_item = (BucketItem*)  GetOrCreateItem(hash_table, cur_word);
+            BucketItem *found_item = (BucketItem*) FindItem(hash_table, cur_word);
             
             fprintf(stderr, "ver word = '%s', item_index = %d, bucket_num = %ld, buckets_count = %ld\n", cur_word, item_index, bucket_num, hash_table->buckets_count);
             
@@ -53,7 +53,7 @@ HashTableVerifyCode CheckHashTableAccordance(HashTable *hash_table)
 }
 
 
-char *GetHashTableErrors(int error, FILE *dest)
+char *GetHashTableErrors(int error)
 {
     static char error_str[ERROR_STR_MAX_SIZE];
     size_t error_str_cursor = 0;
@@ -80,105 +80,111 @@ char *GetHashTableErrors(int error, FILE *dest)
 
 void HashTableDump(HashTable *hash_table)
 {
-    log(DUMP, "");
+    log(LOG, "Hash table [%p]\n", hash_table);
+    log(LOG, "{\n");
 
-    log(INFO, "Hash table [%p]\n", hash_table);
-    log(INFO, "{\n");
-
-    log(INFO, "\tbuckets_count = %ld\n",   hash_table->buckets_count);    
-    log(INFO, "\tload_factor   = %ld\n\n", hash_table->load_factor  );    
+    log(LOG, "\tbuckets_count = %ld\n",   hash_table->buckets_count);    
+    log(LOG, "\tload_factor   = %ld\n\n", hash_table->load_factor  );    
     
     for (size_t i = 0; i < hash_table->buckets_count; i++)
     {
-        log(INFO, "\tBucket %ld:\n", i);
+        log(LOG, "\tBucket %ld:\n", i);
         BucketDump(hash_table->buckets + i);
     }
     
-    log(INFO, "}\n\n\n");
+    log(LOG, "}\n\n\n");
 }
 
 void BucketDump(list_t *bucket)
 {
     lassert(bucket, "bucket == NULL");
 
-    // log(INFO, "bucket[%p]:   ", bucket);
-
-    int num = bucket->head;
+    // log(LOG, "bucket[%p]:   ", bucket);
+    log(LOG, "\thead = %d\n", bucket->head);
+    log(LOG, "\ttail = %d\n", bucket->tail);
+    log(LOG, "\tfree = %d\n", bucket->free);
 
     // table
-    log(INFO, "\n<table border width = \"85%%\"style=\"margin-left: 3%%\">\n");
+    log(LOG, "\n<table border width = \"85%%\"style=\"margin-left: 3%%\">\n");
 
-    log(INFO, "<tr>\n");
-    log(INFO, "<td>index</td>");
+    log(LOG, "<tr>\n");
+    log(LOG, "<td>index</td>");
 
     for (int i = 0; i < bucket->capacity; i++)
     {
-        log(INFO, "<td>%d</td>", i);
+        log(LOG, "<td>%d</td>", i);
     }
 
-    log(INFO, "</tr>\n");
+    log(LOG, "</tr>\n");
 
     // data
-    log(INFO, "<tr>\n");
+    log(LOG, "<tr>\n");
 
-    log(INFO, "<td>data [%p]:</td>\n", bucket->data);
+    log(LOG, "<td>data [%p]:</td>\n", bucket->data);
 
-    for (int i = 0; i < bucket->capacity; i++)
+    // manager
+    log(LOG, "<td>");
+
+    log(LOG, "%s", "manager");
+
+    log(LOG, "</td>\n"); 
+
+    for (int i = 1; i < bucket->capacity; i++)
     {
-        log(INFO, "<td>");
+        log(LOG, "<td>");
 
         void *item = ListGetItem(bucket, i); // (char *) bucket->data + num * bucket->item_size;
         const char *item_val = GetHashTableItemVal(item);
 
-        log(INFO, "%s", item_val);
+        log(LOG, "%s", item_val);
 
-        log(INFO, "</td>\n");   
+        log(LOG, "</td>\n");   
     }
 
-    log(INFO, "</tr>\n");
+    log(LOG, "</tr>\n");
 
     // next
-    log(INFO, "<tr>\n");
+    log(LOG, "<tr>\n");
 
-    log(INFO, "<td>next [%p]:</td>\n", bucket->next);
+    log(LOG, "<td>next [%p]:</td>\n", bucket->next);
 
     for (int i = 0; i < bucket->capacity; i++)
     {
-        log(INFO, "<td>");
+        log(LOG, "<td>");
 
         if (bucket->next[i] == NEXT_POISON)
-            log(INFO, "NX# ");
+            log(LOG, "NX# ");
 
         if (bucket->next[i] == END_OF_FREE)
-            log(INFO, END_OF_FREE_MARK);
+            log(LOG, END_OF_FREE_MARK);
 
         else
-            log(INFO, "%3d ", bucket->next[i]);
+            log(LOG, "%3d ", bucket->next[i]);
 
-        log(INFO, "</td>\n");
+        log(LOG, "</td>\n");
     }
 
-    log(INFO, "</tr>\n");
+    log(LOG, "</tr>\n");
 
     // prev
-    log(INFO, "<tr>\n");
+    log(LOG, "<tr>\n");
 
-    log(INFO, "<td>prev [%p]:</td>\n", bucket->prev);
+    log(LOG, "<td>prev [%p]:</td>\n", bucket->prev);
 
     for (int i = 0; i < bucket->capacity; i++)
     {
-        log(INFO, "<td>");
+        log(LOG, "<td>");
 
         if (bucket->prev[i] == PREV_POISON)
-            log(INFO, "PR# ");
+            log(LOG, "PR# ");
 
         else
-            log(INFO, "%3d ", bucket->prev[i]);
+            log(LOG, "%3d ", bucket->prev[i]);
 
-        log(INFO, "</td>\n");
+        log(LOG, "</td>\n");
     }
 
-    log(INFO, "</table>\n\n");
+    log(LOG, "</table>\n\n");
 }
 
 

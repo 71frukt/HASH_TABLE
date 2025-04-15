@@ -64,7 +64,7 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
 
         fscanf(source, "%" STR(DEFAULT_WORD_LEN) "[a-zA-Z]", cur_word);
 
-        BucketItem *item = GetOrCreateItem(hash_table, cur_word);
+        BucketItem *item = LoadItem(hash_table, cur_word);
         fprintf(stderr, "item = '%s'\n", item->word);
     }
 
@@ -73,7 +73,7 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
     return HASH_FUNC_OK;
 }
 
-BucketItem *GetOrCreateItem(HashTable *hash_table, const char *const word)
+BucketItem *LoadItem(HashTable *hash_table, const char *const word)
 {
     size_t word_hash  = HashFunc(word);
     size_t bucket_num = word_hash % hash_table->buckets_count;
@@ -81,19 +81,27 @@ BucketItem *GetOrCreateItem(HashTable *hash_table, const char *const word)
     list_t *bucket = hash_table->buckets + bucket_num;
 
     int item_index = bucket->head;
-    do
+
+    if (bucket->head != 0)
     {
-        BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
-
-        if (strcmp(word, item->word) == 0)
+        while (true)
         {
-            item->val++;
-            return item;
-        }
+            lassert(item_index != 0, "item_index points on manager");
 
-        item_index = bucket->next[item_index];
-    } 
-    while (item_index != bucket->tail);
+            BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
+
+            if (strcmp(word, item->word) == 0)
+            {
+                item->val++;
+                return item;
+            }
+
+            if (item_index == bucket->tail)
+                break;
+
+            item_index = bucket->next[item_index];
+        }
+    }
 
     // if didn't find
     BucketItem new_item = {};
@@ -101,7 +109,36 @@ BucketItem *GetOrCreateItem(HashTable *hash_table, const char *const word)
     new_item.val = 1;
 
     ListPasteTail(bucket, &new_item);
-    return (BucketItem *) ListGetItem(bucket, item_index);
+    return (BucketItem *) ListGetItem(bucket, bucket->tail);
+}
+
+
+BucketItem *FindItem(HashTable *hash_table, const char *const word)
+{
+    size_t word_hash  = HashFunc(word);
+    size_t bucket_num = word_hash % hash_table->buckets_count;
+
+    list_t *bucket = hash_table->buckets + bucket_num;
+
+    int item_index = bucket->head;
+
+    if (bucket->head != 0)
+    {
+        while (true)
+        {
+            BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
+
+            if (strcmp(word, item->word) == 0)
+                return item;
+
+            if (bucket->head == bucket->tail)
+                break;
+
+            item_index = bucket->next[item_index];
+        }
+    }
+
+    return NULL;
 }
 
 char SkipSpaces(FILE *file)     // returns first read alpha (or EOF) letter

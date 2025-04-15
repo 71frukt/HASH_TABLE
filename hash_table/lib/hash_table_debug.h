@@ -4,6 +4,8 @@
 #include "hash_table.h"
 #include "logger.h"
 
+#define HASH_TABLE_DEBUG
+
 const size_t ITEM_NAME_LEN = 100;
 
 enum HashTableVerifyCode
@@ -23,19 +25,25 @@ void BucketDump    (list_t *bucket);
 
 
 const size_t ERROR_STR_MAX_SIZE = 300;
-char *GetHashTableErrors(int error, FILE *dest);
+char *GetHashTableErrors(int error);
 
 #ifdef HASH_TABLE_DEBUG
 
+#define HASH_TABLE_DUMP(hash_table) do                 \
+{                                                       \
+    log(DUMP, "Hash table dump");                        \
+    HashTableDump(hash_table);                            \
+} while (0)
+
 #define HASH_TABLE_VERIFY(hash_table) do                                                                                                        \
 {                                                                                                                                                \
-    HashTableDump(hash_table);                                                                                                                    \
+    /*HashTableDump(hash_table);*/                                                                                                                    \
                                                                                                                                                    \
     HashTableVerifyCode verify_code = HashTableVerify(hash_table);                                                                                  \
                                                                                                                                                      \
     if (verify_code != HASH_TABLE_OK)                                                                                                                 \
     {                                                                                                                                                  \
-        const char *const errors = GetHashTableErrors(verify_code, stderr);                                                                             \
+        const char *const errors = GetHashTableErrors(verify_code);                                                                                     \
         lassert(errors, "errors == NULL");                                                                                                               \
         log(ERROR, "HASH_TABLE_VERIFY failed! Errors:\n\t %s\n", errors);                                                                                 \
         CloseLogFile();                                                                                                                                    \
@@ -45,6 +53,7 @@ char *GetHashTableErrors(int error, FILE *dest);
 } while(0)
 
 #else
+#define HASH_TABLE_DUMP(hash_table)
 #define HASH_TABLE_VERIFY(hash_table)
 #endif
 
