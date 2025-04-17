@@ -2,6 +2,7 @@
 #define HASH_TABLE_H
 
 #include <stdio.h>
+#include <immintrin.h>
 
 #include "list.h"
 #include "text_color.h"
@@ -14,13 +15,14 @@
 #define DEFAULT_WORD_LEN  32
 
 
-const size_t BUCKETS_COUNT = 1117;
+const size_t BUCKETS_COUNT = 3;
 const size_t LOAD_FACTOR   = 20;
 
 struct BucketItem
 {
-    char   word[DEFAULT_WORD_LEN];
-    size_t val;     // how many times did the word occur
+    // char  word[DEFAULT_WORD_LEN];
+    __m256i word;     // < 32 letters
+    size_t  val;     // how many times did the word occur
 };
 
 struct HashTable
@@ -41,8 +43,8 @@ HashTableFuncRes HashTableCtor (HashTable *hash_table, size_t buckets_count, siz
 HashTableFuncRes HashTableDtor (HashTable *hash_table);
 
 HashTableFuncRes LoadHashTable (HashTable *hash_table, FILE *source);
-BucketItem *     LoadItem      (HashTable *hash_table, const char *const word);
-BucketItem *     FindItem      (HashTable *hash_table, const char *const word);
+BucketItem *     LoadItem      (HashTable *hash_table, const __m256i *const word_m256);
+BucketItem *     FindItem      (HashTable *hash_table, const __m256i *const word_m256);
 
 const char *     GetHashTableItemVal(void *item);
 
@@ -53,7 +55,7 @@ char SkipSpaces(FILE *file);     // returns first read alpha (or EOF) letter
     HashTableFuncRes func_res = hash_table_func;                                                                              \
     if (func_res != HASH_FUNC_OK)                                                                                              \
     {                                                                                                                           \
-        log(ERROR, "Failed " #hash_table_func);                                                                          \
+        log(ERROR, "Failed " #hash_table_func);                                                                                  \
     }                                                                                                                             \
 } while (0)
 

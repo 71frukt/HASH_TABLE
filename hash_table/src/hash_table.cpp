@@ -52,33 +52,42 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
         fprintf(stderr, "error: source file = NULL\n");
         return HASH_FUNC_FAIL;
     }
-
-    char cur_word[DEFAULT_WORD_LEN] = {};
-
+    
     while (true)
     {
         SkipSpaces(source);
-
+        
         if (feof(source))
-            break;
-
+        break;
+        
+        char cur_word[DEFAULT_WORD_LEN] = {};
         fscanf(source, "%" STR(DEFAULT_WORD_LEN) "[a-zA-Z]", cur_word);
 
-        BucketItem *item = LoadItem(hash_table, cur_word);
+        __m256i cur_word_m256 = _mm256_loadu_si256((__m256i *)cur_word);  
+        
+        BucketItem *item = LoadItem(hash_table, &cur_word_m256);
+        if (item == NULL)
+            return HASH_FUNC_FAIL;
+
         lassert(item, "LoadItem failed");
         
         // fprintf(stderr, "item = '%s'\n", item->word);
     }
 
     HASH_TABLE_DUMP(hash_table);
+
+    fprintf(stderr, "end of load before verify\n");
+
     HASH_TABLE_VERIFY(hash_table);
 
     return HASH_FUNC_OK;
 }
 
-BucketItem *LoadItem(HashTable *hash_table, const char *const word)
+BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256)
 {
-    size_t word_hash  = SimpleHash(word);
+    alignas(32) __m256i word_aligned = *word_m256;
+
+    size_t word_hash  = SimpleHash(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;
@@ -93,7 +102,17 @@ BucketItem *LoadItem(HashTable *hash_table, const char *const word)
 
             BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
-            if (strcmp(word, item->word) == 0)
+            fprintf(stderr, "word_m256 = %s, item->word = %s\n\n", word_m256, &item->word);
+
+            fprintf(stderr, "ptr = [%p]\n", &item->word);
+
+            alignas(32) __m256i item_word_aligned = item->word;
+            __m256i cmp_256 = _mm256_cmpeq_epi8(word_aligned, item_word_aligned);
+            int cmp_mask_bits = _mm256_movemask_epi8(cmp_256);
+
+            // log(INFO, "loadItem: w1 = '%s', w2 = '%s', cmp_mask_bits = %d\n", word_m256, &item->word, cmp_mask_bits);
+
+            if (cmp_mask_bits == -1)    // -1 = 0xFFF..F  (bytes are equal => bit in mask)
             {
                 item->val++;
                 return item;
@@ -108,17 +127,20 @@ BucketItem *LoadItem(HashTable *hash_table, const char *const word)
 
     // if didn't find
     BucketItem new_item = {};
-    strncpy(new_item.word, word, DEFAULT_WORD_LEN - 1);
+    new_item.word = *word_m256;
+    // strncpy(new_item.word, word, DEFAULT_WORD_LEN - 1);
+
     new_item.val = 1;
 
     ListPasteTail(bucket, &new_item);
     return (BucketItem *) ListGetItem(bucket, bucket->tail);
 }
 
-
-BucketItem *FindItem(HashTable *hash_table, const char *const word)
+BucketItem *FindItem(HashTable *hash_table, const __m256i *const word_m256)
 {
-    size_t word_hash  = SimpleHash(word);
+    __m256i w = *word_m256; 
+
+    size_t word_hash  = SimpleHash(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;
@@ -133,7 +155,12 @@ BucketItem *FindItem(HashTable *hash_table, const char *const word)
 
             BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
-            if (strcmp(word, item->word) == 0)
+            __m256i cmp_256 = _mm256_cmpeq_epi8(w, item->word);
+            int cmp_mask_bits = _mm256_movemask_epi8(cmp_256);
+
+            // log(INFO, "loadItem: w1 = '%s', w2 = '%s', cmp_mask_bits = %d\n", word_m256, &item->word, cmp_mask_bits);
+
+            if (cmp_mask_bits == -1)    // -1 = 0xFFF..F  (bytes are equal => bit in mask)
                 return item;
 
             if (item_index == bucket->tail)

@@ -9,7 +9,7 @@
 
 HashTableVerifyCode HashTableVerify(HashTable *hash_table)
 {
-fprintf(stderr, "IN VERIFY\n");
+// fprintf(stderr, "IN VERIFY\n");
 
     if (hash_table == NULL)
         return HASH_TABLE_PTR_ERR;
@@ -31,21 +31,19 @@ HashTableVerifyCode CheckHashTableAccordance(HashTable *hash_table)
         list_t *cur_bucket = hash_table->buckets + bucket_num;
         int item_index = cur_bucket->head;
 
-        if (cur_bucket->tail == cur_bucket->head)    // free bucket
+        if (cur_bucket->head == 0)    // free bucket
             continue;
 
         while (true)
         {
             BucketItem *cur_item   = (BucketItem*) ListGetItem(cur_bucket, item_index);
-            char *cur_word         = cur_item->word;
+            BucketItem *found_item = (BucketItem*) FindItem(hash_table, &cur_item->word);
             
-            BucketItem *found_item = (BucketItem*) FindItem(hash_table, cur_word);
-            
-            // fprintf(stderr, "ver word = '%s', item_index = %d, bucket_num = %ld, buckets_count = %ld\n", cur_word, item_index, bucket_num, hash_table->buckets_count);
+            fprintf(stderr, "ver word = '%s', item_index = %d, bucket_num = %ld, buckets_count = %ld\n", &cur_item->word, item_index, bucket_num, hash_table->buckets_count);
             
             if (cur_item != found_item)
             {
-                log(WARNING, "incorrectly find word: item_index = %d, bucket = %d, word = %s", item_index, cur_bucket, cur_word);
+                log(WARNING, "incorrectly find word: item_index = %d, bucket = %d, word = %s", item_index, bucket_num, &cur_item->word);
                 return HASH_TABLE_ACCORDANCE_ERR;
             }
 
@@ -74,8 +72,8 @@ void Benchmark()
 
     for (size_t i = 0; i < 1000; i++)
     {
-        printf("i = %d\n", i);
-        code = CheckHashTableAccordance(&hash_table);
+        printf("i = %ld\n", i);
+        code = wrapper(&hash_table);
     }
     
     ERROR_HANDLER(HashTableDtor(&hash_table));
@@ -231,7 +229,7 @@ const char *GetHashTableItemVal(void *item)
 
     BucketItem *bucket_item = (BucketItem *) item;
     
-    snprintf(item_val, ITEM_NAME_LEN - 1, "'%s' (%ld)", bucket_item->word, bucket_item->val);
+    snprintf(item_val, ITEM_NAME_LEN - 1, "'%s' (%ld)", (char *) &bucket_item->word, bucket_item->val);
 
     return item_val;
 }

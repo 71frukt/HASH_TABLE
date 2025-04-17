@@ -2,8 +2,8 @@ USE_GDB    		 ?= false
 USE_ASAN		 ?= false
 USE_VALGRIND	 ?= false
 
-HASH_TABLE_DEBUG ?= false
-USE_LOGS		 ?= false
+HASH_TABLE_DEBUG ?= true
+USE_LOGS		 ?= true
 
 CXX         =   g++
 OPT_FLAGS   =  -mavx2
@@ -49,7 +49,7 @@ LDFLAGS  = -D _DEBUG -ggdb3 -std=c++17 -Wall -Wextra -Weffc++ -Waggressive-loop-
 
 
 ifneq ($(filter true,$(USE_GDB) $(USE_ASAN) $(USE_VALGRIND)),)
-    LDFLAGS += -g
+    CXXFLAGS += -g
 endif
 
 ifneq ($(USE_VALGRIND), true)

@@ -5,11 +5,13 @@
 #include "hash_funcs.h"
 #include "logger.h"
 
-size_t SimpleHash(const char *const str)
+size_t SimpleHash(const __m256i *const str_256)
 {
     // fprintf(stderr, "easy");
 
     // return BUCKETS_COUNT * strlen(str) / 16;
+
+    const char *const str = (const char *const) str_256;
 
     size_t hash = 5381;
 

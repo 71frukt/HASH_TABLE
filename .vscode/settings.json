@@ -4,7 +4,8 @@
         "парсинга",
         "реаллока",
         "реаллоков",
-        "capa"
+        "capa",
+        "loadu"
     ],
     "files.associations": {
         "array": "cpp",

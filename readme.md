@@ -297,7 +297,7 @@ HashTableVerifyCode (*volatile wrapper)(HashTable *hash_table) = CheckHashTableA
 for (size_t i = 0; i < 1000; i++)
 {
     printf("i = %d\n", i);
-    code = CheckHashTableAccordance(&hash_table);
+    code = wrapper(&hash_table);
 }
 ```
 </details>
@@ -405,3 +405,6 @@ $ kcachegrind callgrind.out.*
 ![alt text](readme_images/valgr1.png)
 
 Видим, что наибольшее собственное время работы имеет strcmp, которая вызывается по несколько раз при поиске каждого элемента - её нужно оптимизировать в первую очередь.
+
+### Оптимизация `strcmp`
+Все слова текста точно меньше 32 букв, тогда мы можем класть слова в YMM-регистры.
