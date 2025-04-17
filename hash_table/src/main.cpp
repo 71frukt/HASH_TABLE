@@ -11,20 +11,24 @@ int main()
 {
     fprintf(stderr, "START\n\n");
 
-    // logctor();
+    logctor();
+
+    Benchmark();
 
     // HashTable hash_table = {};
     // ERROR_HANDLER(HashTableCtor(&hash_table, BUCKETS_COUNT, LOAD_FACTOR));
     
     // FILE *source = fopen("hash_table/build/source.txt", "r");
 
-    // HASH_TABLE_DUMP(&hash_table);
+    // // HASH_TABLE_DUMP(&hash_table);
 
     // ERROR_HANDLER(LoadHashTable(&hash_table, source));    
+
+    // // CheckHashTableAccordance(&hash_table);
     
     // LogBucketsLoadFactor(&hash_table);
 
-    // HASH_TABLE_DUMP(&hash_table);
+    // // HASH_TABLE_DUMP(&hash_table);
 
     // ERROR_HANDLER(HashTableDtor(&hash_table));
     // fclose(source);

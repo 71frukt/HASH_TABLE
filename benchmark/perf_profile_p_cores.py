@@ -75,7 +75,7 @@ def run_perf(command, iterations=10):
         print("\nРезультаты:")
         print(f"Все измерения: {cycles_data}")
         print(f"Среднее значение тактов: {average_cycles:,.0f}")
-        print(f"Среднеквадратическая погрешность: {rmse:,.2f}")
+        print(f"Среднеквадратическая погрешность: {rmse:,.5f}")
 
         with open("perf_results.json", "w") as f:
             json.dump({

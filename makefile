@@ -11,7 +11,7 @@ OPT_LEVEL   ?= -O3
 CXXFLAGS    =  -Wall -Wextra -std=c++17 $(OPT_FLAGS) $(OPT_LEVEL)
 
 ASAN_FLAGS	   = -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr
-VALGRIND_FLAGS = --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes
+VALGRIND_FLAGS = --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes 
 
 HASH_SRC_DIR   = hash_table/src
 HASH_LIB_DIR   = hash_table/lib

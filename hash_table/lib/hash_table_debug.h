@@ -26,6 +26,8 @@ void LogBucketsLoadFactor(HashTable *hash_table);
 const size_t ERROR_STR_MAX_SIZE = 300;
 char *GetHashTableErrors(int error);
 
+void Benchmark();
+
 #ifdef HASH_TABLE_DEBUG
 
 #define HASH_TABLE_DUMP(hash_table) do                 \

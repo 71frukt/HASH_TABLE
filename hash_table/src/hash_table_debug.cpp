@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include "hash_table.h"
 #include "hash_table_debug.h"
@@ -33,26 +34,53 @@ HashTableVerifyCode CheckHashTableAccordance(HashTable *hash_table)
         if (cur_bucket->tail == cur_bucket->head)    // free bucket
             continue;
 
-        do
+        while (true)
         {
             BucketItem *cur_item   = (BucketItem*) ListGetItem(cur_bucket, item_index);
             char *cur_word         = cur_item->word;
-
+            
             BucketItem *found_item = (BucketItem*) FindItem(hash_table, cur_word);
             
             // fprintf(stderr, "ver word = '%s', item_index = %d, bucket_num = %ld, buckets_count = %ld\n", cur_word, item_index, bucket_num, hash_table->buckets_count);
             
             if (cur_item != found_item)
+            {
+                log(WARNING, "incorrectly find word: item_index = %d, bucket = %d, word = %s", item_index, cur_bucket, cur_word);
                 return HASH_TABLE_ACCORDANCE_ERR;
+            }
 
+            if (item_index == cur_bucket->tail)
+                break;
+                
             item_index = cur_bucket->next[item_index];
         }
-        while (item_index != cur_bucket->tail);
     }
+
 
     return HASH_TABLE_OK;
 }
 
+void Benchmark()
+{
+    HashTable hash_table = {};
+    ERROR_HANDLER(HashTableCtor(&hash_table, BUCKETS_COUNT, LOAD_FACTOR));
+    
+    FILE *source = fopen("hash_table/build/source.txt", "r");
+
+    ERROR_HANDLER(LoadHashTable(&hash_table, source));    
+   
+    volatile HashTableVerifyCode code = HASH_TABLE_OK;
+    HashTableVerifyCode (*volatile wrapper)(HashTable *hash_table) = CheckHashTableAccordance;
+
+    for (size_t i = 0; i < 1000; i++)
+    {
+        printf("i = %d\n", i);
+        code = CheckHashTableAccordance(&hash_table);
+    }
+    
+    ERROR_HANDLER(HashTableDtor(&hash_table));
+    fclose(source);
+}
 
 char *GetHashTableErrors(int error)
 {
@@ -83,6 +111,8 @@ char *GetHashTableErrors(int error)
 
 void HashTableDump(HashTable *hash_table)
 {
+    log(INFO, "IN DUMP\n");
+
     log(LOG, "Hash table [%p]\n", hash_table);
     log(LOG, "{\n");
 

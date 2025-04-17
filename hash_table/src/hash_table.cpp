@@ -70,6 +70,7 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
         // fprintf(stderr, "item = '%s'\n", item->word);
     }
 
+    HASH_TABLE_DUMP(hash_table);
     HASH_TABLE_VERIFY(hash_table);
 
     return HASH_FUNC_OK;
@@ -128,12 +129,14 @@ BucketItem *FindItem(HashTable *hash_table, const char *const word)
     {
         while (true)
         {
+            lassert(item_index != 0, "item_index points on manager");
+
             BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
             if (strcmp(word, item->word) == 0)
                 return item;
 
-            if (bucket->head == bucket->tail)
+            if (item_index == bucket->tail)
                 break;
 
             item_index = bucket->next[item_index];
