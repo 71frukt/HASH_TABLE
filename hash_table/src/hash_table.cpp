@@ -5,6 +5,7 @@
 
 #include "hash_table.h"
 #include "hash_table_debug.h"
+#include "list.h"
 
 HashTableFuncRes HashTableCtor(HashTable *hash_table, size_t buckets_count, size_t load_factor)
 {
@@ -62,7 +63,6 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
         
         char cur_word[DEFAULT_WORD_LEN] = {};
         fscanf(source, "%" STR(DEFAULT_WORD_LEN) "[a-zA-Z]", cur_word);
-
         __m256i cur_word_m256 = _mm256_loadu_si256((__m256i *)cur_word);  
         
         BucketItem *item = LoadItem(hash_table, &cur_word_m256);
@@ -85,7 +85,7 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
 
 BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256)
 {
-    alignas(32) __m256i word_aligned = *word_m256;
+    alignas(32) __m256i word_aligned = _mm256_loadu_si256(word_m256);
 
     size_t word_hash  = SimpleHash(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
@@ -102,11 +102,12 @@ BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256)
 
             BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
-            fprintf(stderr, "word_m256 = %s, item->word = %s\n\n", word_m256, &item->word);
+            // fprintf(stderr, "word_m256 = %s, item->word = %s\n\n", word_m256, &item->word);
+            
+            alignas(32) __m256i item_word_aligned = _mm256_loadu_si256(&item->word);
+            // memcpy(&item_word_aligned, &item->word, sizeof(__m256i));
 
-            fprintf(stderr, "ptr = [%p]\n", &item->word);
-
-            alignas(32) __m256i item_word_aligned = item->word;
+            // fprintf(stderr, "ptr = [%p]\n", &item_word_aligned);
             __m256i cmp_256 = _mm256_cmpeq_epi8(word_aligned, item_word_aligned);
             int cmp_mask_bits = _mm256_movemask_epi8(cmp_256);
 
@@ -138,7 +139,8 @@ BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256)
 
 BucketItem *FindItem(HashTable *hash_table, const __m256i *const word_m256)
 {
-    __m256i w = *word_m256; 
+    alignas(32) __m256i word_aligned = _mm256_loadu_si256(word_m256);
+    // memcpy(&word_aligned, word_m256, sizeof(__m256i));
 
     size_t word_hash  = SimpleHash(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
@@ -155,7 +157,13 @@ BucketItem *FindItem(HashTable *hash_table, const __m256i *const word_m256)
 
             BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
-            __m256i cmp_256 = _mm256_cmpeq_epi8(w, item->word);
+            // fprintf(stderr, "word_m256 = %s, item->word = %s\n\n", word_m256, &item->word);
+            
+            alignas(32) __m256i item_word_aligned = _mm256_loadu_si256(&item->word);
+            // memcpy(&item_word_aligned, &item->word, sizeof(__m256i));
+
+            // fprintf(stderr, "ptr = [%p]\n", &item_word_aligned);
+            __m256i cmp_256 = _mm256_cmpeq_epi8(word_aligned, item_word_aligned);
             int cmp_mask_bits = _mm256_movemask_epi8(cmp_256);
 
             // log(INFO, "loadItem: w1 = '%s', w2 = '%s', cmp_mask_bits = %d\n", word_m256, &item->word, cmp_mask_bits);

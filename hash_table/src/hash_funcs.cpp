@@ -23,8 +23,10 @@ size_t SimpleHash(const __m256i *const str_256)
     return hash;
 }
 
-uint32_t Murmurhash_32(const char *const key)
+uint32_t Murmurhash_32(const __m256i *const str_256)
 {
+    const char *const key = (const char *const) str_256;
+
     // fprintf(stderr, "mur");
     uint32_t str_len = strlen(key);
 

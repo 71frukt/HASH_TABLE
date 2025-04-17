@@ -15,7 +15,7 @@
 #define DEFAULT_WORD_LEN  32
 
 
-const size_t BUCKETS_COUNT = 3;
+const size_t BUCKETS_COUNT = 1117;
 const size_t LOAD_FACTOR   = 20;
 
 struct BucketItem

@@ -2,8 +2,8 @@ USE_GDB    		 ?= false
 USE_ASAN		 ?= false
 USE_VALGRIND	 ?= false
 
-HASH_TABLE_DEBUG ?= true
-USE_LOGS		 ?= true
+HASH_TABLE_DEBUG ?= false
+USE_LOGS		 ?= false
 
 CXX         =   g++
 OPT_FLAGS   =  -mavx2
