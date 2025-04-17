@@ -4,8 +4,6 @@
 #include "hash_table.h"
 #include "logger.h"
 
-#define HASH_TABLE_DEBUG
-
 const size_t ITEM_NAME_LEN = 100;
 
 enum HashTableVerifyCode
@@ -23,6 +21,7 @@ HashTableVerifyCode CheckHashTableAccordance (HashTable *hash_table);
 void HashTableDump (HashTable *hash_table);
 void BucketDump    (list_t *bucket);
 
+void LogBucketsLoadFactor(HashTable *hash_table);
 
 const size_t ERROR_STR_MAX_SIZE = 300;
 char *GetHashTableErrors(int error);

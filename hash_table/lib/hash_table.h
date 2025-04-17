@@ -6,6 +6,7 @@
 #include "list.h"
 #include "text_color.h"
 #include "logger.h"
+#include "hash_funcs.h"
 
 #define STR_HELPER(x) #x  
 #define STR(x) STR_HELPER(x)
@@ -13,7 +14,8 @@
 #define DEFAULT_WORD_LEN  32
 
 
-const size_t BUCKETS_COUNT = 5;
+const size_t BUCKETS_COUNT = 4507;
+const size_t LOAD_FACTOR   = 19;
 
 struct BucketItem
 {
@@ -45,9 +47,6 @@ BucketItem *     FindItem      (HashTable *hash_table, const char *const word);
 const char *     GetHashTableItemVal(void *item);
 
 char SkipSpaces(FILE *file);     // returns first read alpha (or EOF) letter
-
-size_t HashFunc(const char *const str);
-
 
 #define ERROR_HANDLER(hash_table_func) do                                                                                   \
 {                                                                                                                            \

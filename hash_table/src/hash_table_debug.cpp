@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "hash_table.h"
 #include "hash_table_debug.h"
@@ -39,7 +40,7 @@ HashTableVerifyCode CheckHashTableAccordance(HashTable *hash_table)
 
             BucketItem *found_item = (BucketItem*) FindItem(hash_table, cur_word);
             
-            fprintf(stderr, "ver word = '%s', item_index = %d, bucket_num = %ld, buckets_count = %ld\n", cur_word, item_index, bucket_num, hash_table->buckets_count);
+            // fprintf(stderr, "ver word = '%s', item_index = %d, bucket_num = %ld, buckets_count = %ld\n", cur_word, item_index, bucket_num, hash_table->buckets_count);
             
             if (cur_item != found_item)
                 return HASH_TABLE_ACCORDANCE_ERR;
@@ -65,7 +66,9 @@ char *GetHashTableErrors(int error)
             error_str_cursor += strlen(#cmp_err);                                           \
                                                                                              \
             if (error_str_cursor == ERROR_STR_MAX_SIZE)                                       \
-                log(WARNING, "error_str overflow");                                   \
+            {                                                                                  \
+                log(WARNING, "error_str overflow");                                             \
+            }                                                                                    \
         }
         
     PRINT_ERROR_PART(error, HASH_TABLE_PTR_ERR);
@@ -97,6 +100,8 @@ void HashTableDump(HashTable *hash_table)
 
 void BucketDump(list_t *bucket)
 {
+    ON_LOGS(
+
     lassert(bucket, "bucket == NULL");
 
     // log(LOG, "bucket[%p]:   ", bucket);
@@ -185,6 +190,8 @@ void BucketDump(list_t *bucket)
     }
 
     log(LOG, "</table>\n\n");
+
+    )
 }
 
 
@@ -197,4 +204,29 @@ const char *GetHashTableItemVal(void *item)
     snprintf(item_val, ITEM_NAME_LEN - 1, "'%s' (%ld)", bucket_item->word, bucket_item->val);
 
     return item_val;
+}
+
+void LogBucketsLoadFactor(HashTable *hash_table)
+{
+    double load_factor_average = 0;
+
+    for (size_t i = 0; i < hash_table->buckets_count; i++)
+    {
+        load_factor_average += hash_table->buckets[i].size;
+        // fprintf(stderr, "size = %d\n", hash_table->buckets[i].size);
+    }
+
+    load_factor_average /= hash_table->buckets_count;
+
+    double sigma = 0;
+
+    for (size_t i = 0; i < hash_table->buckets_count; i++)
+    {
+        sigma += (hash_table->buckets[i].size - load_factor_average) * (hash_table->buckets[i].size - load_factor_average);
+        // fprintf(stderr, "sigma = %f\n", sigma);
+    }
+
+    sigma = sqrt(sigma / hash_table->buckets_count);
+
+    log(INFO, "load_factor_average = %f, sigma = %f\n", load_factor_average, sigma);
 }

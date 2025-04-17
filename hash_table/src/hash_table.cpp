@@ -65,7 +65,9 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
         fscanf(source, "%" STR(DEFAULT_WORD_LEN) "[a-zA-Z]", cur_word);
 
         BucketItem *item = LoadItem(hash_table, cur_word);
-        fprintf(stderr, "item = '%s'\n", item->word);
+        lassert(item, "LoadItem failed");
+        
+        // fprintf(stderr, "item = '%s'\n", item->word);
     }
 
     HASH_TABLE_VERIFY(hash_table);
@@ -75,7 +77,7 @@ HashTableFuncRes LoadHashTable(HashTable *hash_table, FILE *source)
 
 BucketItem *LoadItem(HashTable *hash_table, const char *const word)
 {
-    size_t word_hash  = HashFunc(word);
+    size_t word_hash  = SimpleHash(word);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;
@@ -115,7 +117,7 @@ BucketItem *LoadItem(HashTable *hash_table, const char *const word)
 
 BucketItem *FindItem(HashTable *hash_table, const char *const word)
 {
-    size_t word_hash  = HashFunc(word);
+    size_t word_hash  = SimpleHash(word);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;
