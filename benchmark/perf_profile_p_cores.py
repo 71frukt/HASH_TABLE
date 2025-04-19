@@ -21,6 +21,15 @@ def read_perf_json(filepath):
     return data
 
 def run_perf(command, iterations=10):
+    # Устанавливаем верхний и нижний пределы частоты CPU
+    try:
+        subprocess.run(["sudo", "cpupower", "frequency-set", "-u", "2000MHz"], check=True)
+        subprocess.run(["sudo", "cpupower", "frequency-set", "-d", "2000MHz"], check=True)
+        print("Установлены ограничения частоты CPU: min=2000MHz, max=2000MHz")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при установке частоты CPU: {e.stderr.decode()}")
+        return  # Прерываем выполнение, если не удалось установить частоту
+
     cycles_data = []
     
     for i in range(iterations):
@@ -87,6 +96,15 @@ def run_perf(command, iterations=10):
             }, f, indent=2)
     else:
         print("Нет валидных данных для анализа")
+
+     # Устанавливаем верхний и нижний пределы частоты CPU
+    try:
+        subprocess.run(["sudo", "cpupower", "frequency-set", "-u", "6000MHz"], check=True)
+        subprocess.run(["sudo", "cpupower", "frequency-set", "-d", "1MHz"], check=True)
+        print("Установлены ограничения частоты CPU: min=6000MHz, max=1MHz")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при установке частоты CPU: {e.stderr.decode()}")
+        return  # Прерываем выполнение, если не удалось установить частоту
 
 if __name__ == "__main__":
     run_perf(["./hash_table/build/hash_table"])

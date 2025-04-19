@@ -43,8 +43,9 @@ HashTableFuncRes HashTableCtor (HashTable *hash_table, size_t buckets_count, siz
 HashTableFuncRes HashTableDtor (HashTable *hash_table);
 
 HashTableFuncRes LoadHashTable (HashTable *hash_table, FILE *source);
-BucketItem *     LoadItem      (HashTable *hash_table, const __m256i *const word_m256);
-BucketItem *     FindItem      (HashTable *hash_table, const __m256i *const word_m256);
+HashTableFuncRes LoadHashTable2(HashTable *hash_table, const char *const source_file_name);
+BucketItem *     LoadItem      (HashTable *hash_table, const __m256i *const word_m256_ptr);
+BucketItem *     FindItem      (HashTable *hash_table, const __m256i *const word_m256_ptr);
 
 const char *     GetHashTableItemVal(void *item);
 

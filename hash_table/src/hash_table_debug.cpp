@@ -64,21 +64,30 @@ void Benchmark()
     HashTable hash_table = {};
     ERROR_HANDLER(HashTableCtor(&hash_table, BUCKETS_COUNT, LOAD_FACTOR));
     
-    FILE *source = fopen("hash_table/build/source.txt", "r");
-
-    ERROR_HANDLER(LoadHashTable(&hash_table, source));    
-   
-    volatile HashTableVerifyCode code = HASH_TABLE_OK;
-    HashTableVerifyCode (*volatile wrapper)(HashTable *hash_table) = CheckHashTableAccordance;
-
+    // FILE *source = fopen("hash_table/build/source.txt", "r");    
+    // ERROR_HANDLER(LoadHashTable(&hash_table, source));    
+    
+    // volatile HashTableVerifyCode code = HASH_TABLE_OK;
+    volatile HashTableFuncRes code = HASH_FUNC_OK;
+    
+    // HashTableVerifyCode (*volatile wrapper)(HashTable *hash_table) = CheckHashTableAccordance;
+    // HashTableFuncRes (*volatile wrapper)(HashTable *hash_table, FILE *source) = LoadHashTable;
+    HashTableFuncRes (*volatile wrapper)(HashTable *hash_table, const char *const source_file_name) = LoadHashTable2;
+    
     for (size_t i = 0; i < 1000; i++)
     {
         printf("i = %ld\n", i);
-        code = wrapper(&hash_table);
+        // FILE *source = fopen("hash_table/build/source.txt", "r");
+        // code = wrapper(&hash_table);
+        code = wrapper(&hash_table, "hash_table/build/source.txt");
+        // fclose(source);
+
+        HASH_TABLE_DUMP(&hash_table);
     }
-    
+
+    fprintf(stderr, "code = %d\n", code);
+    // fclose(source);
     ERROR_HANDLER(HashTableDtor(&hash_table));
-    fclose(source);
 }
 
 char *GetHashTableErrors(int error)
