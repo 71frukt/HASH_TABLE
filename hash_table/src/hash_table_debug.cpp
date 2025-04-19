@@ -64,6 +64,8 @@ void Benchmark()
     HashTable hash_table = {};
     ERROR_HANDLER(HashTableCtor(&hash_table, BUCKETS_COUNT, LOAD_FACTOR));
     
+    HASH_TABLE_DUMP(&hash_table);
+
     // FILE *source = fopen("hash_table/build/source.txt", "r");    
     // ERROR_HANDLER(LoadHashTable(&hash_table, source));    
     
@@ -74,18 +76,18 @@ void Benchmark()
     // HashTableFuncRes (*volatile wrapper)(HashTable *hash_table, FILE *source) = LoadHashTable;
     HashTableFuncRes (*volatile wrapper)(HashTable *hash_table, const char *const source_file_name) = LoadHashTable2;
     
-    for (size_t i = 0; i < 1000; i++)
+    for (size_t i = 0; i < 20; i++)
     {
         printf("i = %ld\n", i);
         // FILE *source = fopen("hash_table/build/source.txt", "r");
+        // code = wrapper(&hash_table, source);
         // code = wrapper(&hash_table);
         code = wrapper(&hash_table, "hash_table/build/source.txt");
         // fclose(source);
 
-        HASH_TABLE_DUMP(&hash_table);
+        // HASH_TABLE_DUMP(&hash_table)a;
     }
 
-    fprintf(stderr, "code = %d\n", code);
     // fclose(source);
     ERROR_HANDLER(HashTableDtor(&hash_table));
 }

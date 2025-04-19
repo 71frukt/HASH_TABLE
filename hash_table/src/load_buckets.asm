@@ -1,19 +1,22 @@
 section .text
 
-global LoadBuckets            ; predefined entry point name for ldч
-extern LoadItem
+extern _Z8LoadItemP9HashTablePKDv4_x
+extern isalpha
 
+global LoadBuckets            ; predefined entry point name for ldч
 ;=================================================================================
 ; LoadBuckets
 ; Загружает бакеты словами из текста
 ;
-; Input:    rdi = end_of_data; rsi = source_data; rdx = hash_table_ptr
+; Input:    rdi = source_data; rsi = end_of_data; rdx = hash_table_ptr
 ; Output:   none
 ; Destroys: rax, rcx, rdx, rsi, rdi
 ;=================================================================================
 LoadBuckets:
     push rbp                        ; install the stack frame
     mov  rbp, rsp
+
+    push rbx
 
     mov  r9,  rdx                   ; hash_table_ptr
     mov  rbx, rdi                   ; source_data
@@ -25,7 +28,8 @@ load_new_word:
     jae  end_of_load_bucket
 
     ; пропустить не-буквы
-    mov  rdi, byte ptr [rbx]
+    xor  rdi, rdi
+    mov  dil, [rbx]
     call isalpha
     test rax, rax
     jnz  start_of_word
@@ -42,8 +46,9 @@ start_of_word:
 
 
     mov  rsi, rsp                   ; buffer for cur_word
+    xor  rdi, rdi
 new_letter:
-    mov  rdi, byte ptr [rbx]
+    mov  dil, [rbx]
     call isalpha
     test rax, rax
     jz   end_of_word
@@ -56,12 +61,20 @@ new_letter:
 
 end_of_word:
 
-    vmovdqu ymm0, rsp               ; (__m256i *)cur_word
+    vmovdqu ymm0, [rsp]               ; (__m256i *)cur_word
     mov  rdi, r9                    ; hash_table_ptr
-    call LoadItem
+    mov  rsi, rsp
+    push rdx
+    push r9
+    call _Z8LoadItemP9HashTablePKDv4_x
+    pop  r9
+    pop  rdx
 
+    add  rsp, 32
     jmp  load_new_word
 
 end_of_load_bucket:
+    ; vzeroupper
+    pop rbx
     leave
     ret

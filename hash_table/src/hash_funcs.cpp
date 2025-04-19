@@ -7,11 +7,7 @@
 
 size_t SimpleHash(const __m256i *const str_256)
 {
-    // fprintf(stderr, "easy");
-
-    // return BUCKETS_COUNT * strlen(str) / 16;
-
-    const char *const str = (const char *const) str_256;
+    const char *const str = (char *) str_256;
 
     size_t hash = 5381;
 
@@ -25,7 +21,7 @@ size_t SimpleHash(const __m256i *const str_256)
 
 uint32_t Murmurhash_32(const __m256i *const str_256)
 {
-    const char *const key = (const char *const) str_256;
+    const char *const key = (char *) str_256;
 
     // fprintf(stderr, "mur");
     uint32_t str_len = strlen(key);
@@ -175,4 +171,30 @@ uint32_t XXH32(const char *const input_str)
     h32 ^= h32 >> 16;
 
     return h32;
+}
+
+
+size_t YMM_HashFunc(const __m256i data)
+{
+    size_t  result;
+    __m128i low; 
+    __m128i high;
+    
+    asm volatile (
+        "vextracti128 $0, %[ymm_data], %[low]  \n\t" 
+        "vextracti128 $1, %[ymm_data], %[high] \n\t"
+        "vpxor %[low]   , %[high]    , %[low]  \n\t"
+        "vpshufd $0x4E  , %[low]     , %[high] \n\t"
+        "vpxor %[low]   , %[high]    , %[low]  \n\t"
+        "vmovq %[low]   , %[result]                "
+
+        : [result]   "=r" (result),
+          [low]      "+x" (low),
+          [high]     "=x" (high)
+
+        : [ymm_data] "x"  (data)
+        : "cc"
+    );
+
+    return result;
 }

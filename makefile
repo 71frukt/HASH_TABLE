@@ -6,9 +6,12 @@ HASH_TABLE_DEBUG ?= false
 USE_LOGS		 ?= false
 
 CXX         =   g++
+ASM 		=   nasm
 OPT_FLAGS   =  -mavx2
 OPT_LEVEL   ?= -O3
-CXXFLAGS    =  -Wall -Wextra -std=c++17 $(OPT_FLAGS) $(OPT_LEVEL)
+
+CXXFLAGS    =  -Wall -Wextra -std=c++17 $(OPT_FLAGS) $(OPT_LEVEL) -fno-pie
+ASMFLAGS 	=  -f elf64
 
 ASAN_FLAGS	   = -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr
 VALGRIND_FLAGS = --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes 
@@ -30,10 +33,14 @@ LOGS_OBJ_DIR   = logger/obj
 BUILD_DIR      = hash_table/build
 
 HASH_SRC_CPP   = $(wildcard $(HASH_SRC_DIR)/*.cpp)
+HASH_SRC_ASM   = $(wildcard $(HASH_SRC_DIR)/*.asm)
+
 LIST_SRC_CPP   = $(wildcard $(LIST_SRC_DIR)/*.cpp)
 LOGS_SRC_CPP   = $(wildcard $(LOGS_SRC_DIR)/*.cpp)
 
 HASH_OBJ_CPP   = $(patsubst $(HASH_SRC_DIR)/%.cpp,$(HASH_OBJ_DIR)/%.o,$(HASH_SRC_CPP))
+HASH_OBJ_ASM   = $(patsubst $(HASH_SRC_DIR)/%.asm,$(HASH_OBJ_DIR)/%.o,$(HASH_SRC_ASM))
+
 LIST_OBJ_CPP   = $(patsubst $(LIST_SRC_DIR)/%.cpp,$(LIST_OBJ_DIR)/%.o,$(LIST_SRC_CPP))
 LOGS_OBJ_CPP   = $(patsubst $(LOGS_SRC_DIR)/%.cpp,$(LOGS_OBJ_DIR)/%.o,$(LOGS_SRC_CPP))
 
@@ -45,7 +52,7 @@ LDFLAGS  = -D _DEBUG -ggdb3 -std=c++17 -Wall -Wextra -Weffc++ -Waggressive-loop-
  -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=2 -Wsuggest-attribute=noreturn -Wsuggest-final-methods -Wsuggest-final-types -Wsuggest-override -Wswitch-default            \
  -Wswitch-enum -Wsync-nand -Wundef -Wunreachable-code -Wunused -Wuseless-cast -Wvariadic-macros -Wno-literal-suffix -Wno-missing-field-initializers -Wno-narrowing                  \
  -Wno-old-style-cast -Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation -fstack-protector -fstrict-overflow -flto-odr-type-merging -fno-omit-frame-pointer              \
- -Wlarger-than=81920 -Wstack-usage=81920 -pie -fPIE -Werror=vla
+ -Wlarger-than=81920 -Wstack-usage=81920 -no-pie -Werror=vla
 
 
 ifneq ($(filter true,$(USE_GDB) $(USE_ASAN) $(USE_VALGRIND)),)
@@ -83,17 +90,23 @@ gdb:
 callgrind:
 	make rebuild USE_VALGRIND=true && valgrind $(VALGRIND_FLAGS) $(TARGET)
 
+r2:
+	r2 $(TARGET)
+
 clean:
 	rm -rf $(HASH_OBJ_DIR) $(LIST_OBJ_DIR) $(LOGS_OBJ_DIR) $(TARGET)
 
 rebuild: clean all
 
 
-$(TARGET): $(HASH_OBJ_CPP) $(LIST_OBJ_CPP) $(LOGS_OBJ_CPP) | $(BUILD_DIR)
-	$(CXX) $(HASH_OBJ_CPP) $(LIST_OBJ_CPP) $(LOGS_OBJ_CPP) -o $@ $(LDFLAGS)
+$(TARGET): $(HASH_OBJ_CPP) $(HASH_OBJ_ASM) $(LIST_OBJ_CPP) $(LOGS_OBJ_CPP) | $(BUILD_DIR)
+	$(CXX) $(HASH_OBJ_CPP) $(HASH_OBJ_ASM) $(LIST_OBJ_CPP) $(LOGS_OBJ_CPP) -o $@ $(LDFLAGS)
 
 $(HASH_OBJ_DIR)/%.o: $(HASH_SRC_DIR)/%.cpp | $(HASH_OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -I$(HASH_LIB_DIR) -I$(LIST_LIB_DIR) -I$(LOGS_LIB_DIR) -c $< -o $@
+
+$(HASH_OBJ_DIR)/%.o: $(HASH_SRC_DIR)/%.asm | $(HASH_OBJ_DIR)
+	$(ASM) $(ASMFLAGS) -I$(HASH_LIB_DIR) -I$(LIST_LIB_DIR) $< -o $@ 
 
 $(LIST_OBJ_DIR)/%.o: $(LIST_SRC_DIR)/%.cpp | $(LIST_OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -I$(LIST_LIB_DIR) -I$(LOGS_LIB_DIR) -c $< -o $@

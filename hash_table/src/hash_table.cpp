@@ -9,8 +9,11 @@
 #include <unistd.h>
 
 #include "hash_table.h"
+#include "hash_funcs.h"
 #include "hash_table_debug.h"
 #include "list.h"
+
+extern "C" void LoadBuckets(char *source_data, char *end_of_source_data, HashTable *hash_table);
 
 HashTableFuncRes HashTableCtor(HashTable *hash_table, size_t buckets_count, size_t load_factor)
 {
@@ -111,26 +114,27 @@ HashTableFuncRes LoadHashTable2(HashTable *hash_table, const char *const source_
         return HASH_FUNC_FAIL;
     }
 
-    while (source_data < end_of_data)
-    {
-        if (!isalpha(*source_data++)) continue;
+    // while (source_data < end_of_data)
+    // {
+    //     if (!isalpha(*source_data++)) continue;
         
-        int i = 0;
-        char cur_word[DEFAULT_WORD_LEN] = {};
+    //     int i = 0;
+    //     char cur_word[DEFAULT_WORD_LEN] = {};
 
-        while (isalpha(*source_data))
-        {
-            cur_word[i++] = *source_data;
-            source_data++;
-        }
+    //     while (isalpha(*source_data))
+    //     {
+    //         cur_word[i++] = *source_data;
+    //         source_data++;
+    //     }
         
-        __m256i cur_word_m256 = _mm256_loadu_si256((__m256i *)cur_word);
-        BucketItem *item = LoadItem(hash_table, &cur_word_m256);
+    //     __m256i cur_word_m256 = _mm256_loadu_si256((__m256i *)cur_word);
+    //     BucketItem *item = LoadItem(hash_table, &cur_word_m256);
         
-        lassert(item, "LoadItem failed");
-    }
+    //     lassert(item, "LoadItem failed");
+    // }
 
-
+    LoadBuckets(source_data, end_of_data, hash_table);
+    
     munmap(source_data, source_size);
     close(source_fd);
 
@@ -143,9 +147,13 @@ HashTableFuncRes LoadHashTable2(HashTable *hash_table, const char *const source_
 
 BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
 {
+    lassert(hash_table, "hash_table = NULL");
+    lassert(hash_table->buckets_count, "attempt to load in empty hash table");
+    lassert(word_m256_ptr, "word_m256_ptr = NULL");
+
     __m256i word_m256 = _mm256_loadu_si256(word_m256_ptr);
 
-    size_t word_hash  = SimpleHash(word_m256_ptr);
+    size_t word_hash  = YMM_HashFunc(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;
@@ -160,16 +168,8 @@ BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
 
             BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
-            // fprintf(stderr, "word_m256 = %s, item->word = %s\n\n", word_m256, &item->word);
-            
-            // __m256i item_word_aligned = item->word; //_mm256_loadu_si256(&item->word);
-            // memcpy(&item_word_aligned, &item->word, sizeof(__m256i));
-
-            // fprintf(stderr, "ptr = [%p]\n", &item_word_aligned);
             __m256i cmp_256   = _mm256_cmpeq_epi8(word_m256, item->word);
             int cmp_mask_bits = _mm256_movemask_epi8(cmp_256);
-
-            // log(INFO, "loadItem: w1 = '%s', w2 = '%s', cmp_mask_bits = %d\n", word_m256, &item->word, cmp_mask_bits);
 
             if (cmp_mask_bits == -1)    // -1 = 0xFFF..F  (bytes are equal => bit in mask)
             {
@@ -187,7 +187,6 @@ BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
     // if didn't find
     BucketItem new_item = {};
     new_item.word = word_m256;
-    // strncpy(new_item.word, word, DEFAULT_WORD_LEN - 1);
 
     new_item.val = 1;
 
@@ -199,7 +198,7 @@ BucketItem *FindItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
 {
     __m256i word_m256 = _mm256_loadu_si256(word_m256_ptr);
 
-    size_t word_hash  = SimpleHash(word_m256_ptr);
+    size_t word_hash  = YMM_HashFunc(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;

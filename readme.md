@@ -447,7 +447,67 @@ fscanf(source, "%" STR(DEFAULT_WORD_LEN) "[a-zA-Z]", cur_word);
 __m256i cur_word_m256 = _mm256_loadu_si256((__m256i *)cur_word);  
 ````
 
-// НАПИСАТЬ ПРО ТО КАК РЕАЛИЗОВАЛ 
+<br>
+
+_Измененная функция загрузки слова в хеш-таблицу:_
+<details>
+<summary>LoadItem</summary>
+
+```C
+BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
+{
+    lassert(hash_table, "hash_table = NULL");
+    lassert(word_m256_ptr, "word_m256_ptr = NULL");
+
+    __m256i word_m256 = _mm256_loadu_si256(word_m256_ptr);
+
+    size_t word_hash  = SimpleHash(word_m256_ptr);
+    size_t bucket_num = word_hash % hash_table->buckets_count;
+
+    list_t *bucket = hash_table->buckets + bucket_num;
+
+    int item_index = bucket->head;
+
+    if (bucket->head != 0)
+    {
+        while (true)
+        {
+            lassert(item_index != 0, "item_index points on manager");
+
+            BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
+
+            __m256i cmp_256   = _mm256_cmpeq_epi8(word_m256, item->word);
+            int cmp_mask_bits = _mm256_movemask_epi8(cmp_256);
+
+            if (cmp_mask_bits == -1)    // -1 = 0xFFF..F  (bytes are equal => bit in mask)
+            {
+                item->val++;
+                return item;
+            }
+
+            if (item_index == bucket->tail)
+                break;
+
+            item_index = bucket->next[item_index];
+        }
+    }
+
+    // if didn't find
+    BucketItem new_item = {};
+    new_item.word = word_m256;
+
+    new_item.val = 1;
+
+    ListPasteTail(bucket, &new_item);
+    return (BucketItem *) ListGetItem(bucket, bucket->tail);
+}
+```
+
+</details>
+
+<br>
+
+Здесь `strcmp` заменяется на `_mm256_cmpeq_epi8` для получения маски сравнения двух слов и `_mm256_movemask_epi8` для обработки этой маски. 
 
 Измерив производительность этой версии программы, получим:
 
@@ -467,7 +527,7 @@ __m256i cur_word_m256 = _mm256_loadu_si256((__m256i *)cur_word);
 * Среднее значение - **1 241 817 957**
 * Вариация - **0,005**
 
-Это на **32%** быстрее, чем прошлая версия.  
+Это на **47%** быстрее, чем прошлая версия.  
 Снова проведем анализ профилировщиком valgrind. Имеем:
 
 ![alt text](readme_images/valgr2.png)
@@ -504,25 +564,253 @@ void *ListGetItem(list_t *list, int item_num)
 Такая малая оптимизация улучшила производительность программы ещё на **29%** в сравнении с прошлой версией.
 
 ### Оптимизация `SimpleHash`
-сюда написать чето
+Мы видим, что наша хеш-функция занимает довольно долго времени и вызывается крайне часто - при поиске каждого слова. Попробуем использовать максимально быструю хеш функцию, также используя то, что теперь слова представляют из себя широкие регистры. Для реализуем её ассемблерной вставкой:
 
+```C
+inline size_t YMM_HashFunc(const __m256i data)
+{
+    size_t  result;
+    __m128i low; 
+    __m128i high;
+    
+    asm volatile (
+        "vextracti128 $0, %[ymm_data], %[low]  \n\t" 
+        "vextracti128 $1, %[ymm_data], %[high] \n\t"
+        "vpxor %[low]   , %[high]    , %[low]  \n\t"
+        "vpshufd $0x4E  , %[low]     , %[high] \n\t"
+        "vpxor %[low]   , %[high]    , %[low]  \n\t"
+        "vmovq %[low]   , %[result]                "
+
+        : [result]   "=r" (result),
+          [low]      "+x" (low),
+          [high]     "=x" (high)
+
+        : [ymm_data] "x"  (data)
+        : "cc"
+    );
+
+    return result;
+}
+```
+
+Результат бенчмарка после оптимизации:
+
+| Запуск | Тактов P-cores   |
+|--------|-----------------:|
+| 1      |    481,138,613   |
+| 2      |    478,734,574   |
+| 3      |    484,536,041   |
+| 4      |    482,064,479   |
+| 5      |    481,535,684   |
+| 6      |    478,785,169   |
+| 7      |    482,237,264   |
+| 8      |    480,966,146   |
+| 9      |    482,515,816   |
+| 10     |    479,041,056   |
+
+* Среднее значение - **481 138 613**
+* Вариация - **0,003**
+
+Получили улучшение производительности в **1.8 раза**.
+
+![alt text](readme_images/valgr4.png)
+
+Заметно, что теперь хеш-функция занимает меньше 6%.
 
 ### Оптимизация загрузки хеш-таблицы
-Сейчас мы уделяли особое внимание поиску элементов в таблице, но что если обратить внимание ещё на процесс загрузки в таблицу данных? Запустим цикл, подобный прошлому, но теперь в 20 итераций, поскольку процесс загрузки оказался крайне небыстрым:
-
-| Запуск | Тактов P-cores (текущая версия) | Тактов P-cores (начальная версия)
-|--------|--------------------------------:|
-|   1    |          1 635 470 040          |
-|   2    |          1 647 353 891          |
-|   3    |          1 687 574 133          |
-|   4    |          1 655 184 049          |
-|   5    |          1 644 966 838          |
-|   6    |          1 638 664 048          |
-|   7    |          1 656 830 588          |
-|   8    |          1 682 982 223          |
-|   9    |          1 643 369 262          |
-|   10   |          1 638 668 699          |
+Сейчас мы уделяли особое внимание поиску элементов в таблице, но что если обратить внимание ещё на процесс загрузки в таблицу данных? Запустим цикл, подобный прошлому, но теперь в 20 итераций, поскольку процесс загрузки оказался крайне небыстрым.
 
 ![alt text](readme_images/valgr3.png)
 
-Видим, что почти всё время занимает `fscanf`. Напишем свою функцию, которая будет обрабатывать считывание из файл. Для этого придется переписать и `LoadHashTable`. Вместо стандартной работы с FILE* через `fopen` будем использовать системный вызов mmap. 
+Видим, что почти всё время занимает `fscanf`. Напишем свою функцию, которая будет обрабатывать считывание из файл. Для этого придется переписать и `LoadHashTable`. Вместо стандартной работы с FILE* через `fopen` будем использовать системный вызов mmap. После изменений получим следующие результаты:
+
+
+| Запуск | Тактов P-cores (самая начальная версия) | Тактов P-cores (текущая версия)  |
+|--------|----------------------------------------:|---------------------------------:|
+|   1    |          1 635 470 040                  |       798 317 925                |
+|   2    |          1 647 353 891                  |       799 118 163                |
+|   3    |          1 687 574 133                  |       784 804 964                |
+|   4    |          1 655 184 049                  |       800 010 922                |
+|   5    |          1 644 966 838                  |       797 885 875                |
+|   6    |          1 638 664 048                  |       797 261 444                |
+|   7    |          1 656 830 588                  |       798 414 822                |
+|   8    |          1 682 982 223                  |       782 127 049                |
+|   9    |          1 643 369 262                  |       800 123 944                |
+|   10   |          1 638 668 699                  |       788 130 281                |
+
+Для текущей версии:
+* Среднее значение - **794 619 528**
+* Вариация - **0,005**
+
+Мы получили прирост в производительности примерно в два раза, однако `LoadHashTable` всё равно является самой горячей функцией. Перенесём её основную часть - цикл загрузки слов - в отдельную ассемблерную функцию. 
+
+<details>
+<summary>load_buckets.asm</summary>
+
+```asm
+section .text
+
+extern _Z8LoadItemP9HashTablePKDv4_x
+extern isalpha
+
+global LoadBuckets            ; predefined entry point name for ldч
+;=================================================================================
+; LoadBuckets
+; Загружает бакеты словами из текста
+;
+; Input:    rdi = source_data; rsi = end_of_data; rdx = hash_table_ptr
+; Output:   none
+; Destroys: rax, rcx, rdx, rsi, rdi
+;=================================================================================
+LoadBuckets:
+    push rbp                        ; install the stack frame
+    mov  rbp, rsp
+
+    push rbx
+
+    mov  r9,  rdx                   ; hash_table_ptr
+    mov  rbx, rdi                   ; source_data
+    mov  rdx, rsi                   ; end of source_data
+
+
+load_new_word:
+    cmp  rbx, rdx
+    jae  end_of_load_bucket
+
+    ; пропустить не-буквы
+    xor  rdi, rdi
+    mov  dil, [rbx]
+    call isalpha
+    test rax, rax
+    jnz  start_of_word
+
+    inc  rbx
+    jmp  load_new_word
+
+start_of_word:
+    ; выделить 32 нулевых байта
+    sub  rsp, 32                
+    vpxor ymm0, ymm0, ymm0      
+    ; mov  rdi, rsp
+    vmovdqu [rsp], ymm0
+
+
+    mov  rsi, rsp                   ; buffer for cur_word
+    xor  rdi, rdi
+new_letter:
+    mov  dil, [rbx]
+    call isalpha
+    test rax, rax
+    jz   end_of_word
+
+    mov  al, [rbx]
+    mov  [rsi], al
+    inc  rbx
+    inc  rsi
+    jmp new_letter
+
+end_of_word:
+
+    vmovdqu ymm0, [rsp]               ; (__m256i *)cur_word
+    mov  rdi, r9                    ; hash_table_ptr
+    mov  rsi, rsp
+    push rdx
+    push r9
+    call _Z8LoadItemP9HashTablePKDv4_x
+    pop  r9
+    pop  rdx
+
+    add  rsp, 32
+    jmp  load_new_word
+
+end_of_load_bucket:
+    ; vzeroupper
+    pop rbx
+    leave
+    ret
+```
+
+</details>
+
+<br>
+
+
+Функция `LoadHashTable` теперь выглядит так:
+
+<details>
+<summary>LoadHashTable</summary>
+
+```C
+
+    HASH_TABLE_VERIFY(hash_table);
+
+    int source_fd = open(source_file_name, O_RDONLY);
+
+    if (source_fd == -1) 
+    {
+        fprintf(stderr, "open file error\n");
+        return HASH_FUNC_FAIL;
+    }
+
+    struct stat st;
+    fstat(source_fd, &st);
+    size_t source_size = st.st_size;
+
+    char* source_data = (char *) mmap(NULL, source_size, PROT_READ, MAP_PRIVATE, source_fd, 0);
+    char* end_of_data = source_data + source_size;
+
+    if (source_data == MAP_FAILED)
+    {
+        fprintf(stderr, "mmap failed\n");
+        close(source_fd);
+        return HASH_FUNC_FAIL;
+    }
+
+    LoadBuckets(source_data, end_of_data, hash_table);
+    
+    munmap(source_data, source_size);
+    close(source_fd);
+
+    HASH_TABLE_VERIFY(hash_table);
+
+    return HASH_FUNC_OK;
+```
+
+</details>
+
+<br>
+
+Проведя бенчмарк, получим такой результат:
+
+| Запуск | Тактов P-cores   |
+|--------|-----------------:|
+| 1      |    736 411 063   |
+| 2      |    734 865 239   |
+| 3      |    734 061 409   |
+| 4      |    755 294 841   |
+| 5      |    754 636 424   |
+| 6      |    756 023 607   |
+| 7      |    751 162 744   |
+| 8      |    740 396 563   |
+| 9      |    751 927 730   |
+| 10     |    737 497 933   |
+
+* Среднее значение - **745 227 755**
+* Вариация - **0,01**
+
+Эта оптимизация ускорила загрузку хеш-таблицы на **7%**.
+
+## Итоги
+
+Мы провели три вида оптимизаций, получив следующие результаты:
+
+_Измерения поиска значений (циклом в 1000 итераций)_
+
+| Оптимизация      | Относительная производительность |
+|------------------|---------------------------------:|
+| начальная версия |   100%                           |
+| `strcmp`         |   147%                           |
+| `ListGetItem`    |   210%                           |
+| `SimpleHash`     |   280%                           |
+
+Также мы ускорили функцию загрузки хеш-таблицы на 7%.
