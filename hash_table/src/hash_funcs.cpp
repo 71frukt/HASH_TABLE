@@ -5,7 +5,7 @@
 #include "hash_funcs.h"
 #include "logger.h"
 
-size_t SimpleHash(const __m256i *const str_256)
+size_t DJB2(const __m256i *const str_256)
 {
     const char *const str = (char *) str_256;
 

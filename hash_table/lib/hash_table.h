@@ -38,7 +38,6 @@ enum HashTableFuncRes
     HASH_FUNC_FAIL,
 };
 
-
 HashTableFuncRes HashTableCtor (HashTable *hash_table, size_t buckets_count, size_t load_factor);
 HashTableFuncRes HashTableDtor (HashTable *hash_table);
 

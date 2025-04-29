@@ -2,8 +2,8 @@ USE_GDB    		 ?= false
 USE_ASAN		 ?= false
 USE_VALGRIND	 ?= false
 
-HASH_TABLE_DEBUG ?= false
-USE_LOGS		 ?= false
+HASH_TABLE_DEBUG ?= true
+USE_LOGS		 ?= true
 
 CXX         =   g++
 ASM 		=   nasm
@@ -44,7 +44,7 @@ HASH_OBJ_ASM   = $(patsubst $(HASH_SRC_DIR)/%.asm,$(HASH_OBJ_DIR)/%.o,$(HASH_SRC
 LIST_OBJ_CPP   = $(patsubst $(LIST_SRC_DIR)/%.cpp,$(LIST_OBJ_DIR)/%.o,$(LIST_SRC_CPP))
 LOGS_OBJ_CPP   = $(patsubst $(LOGS_SRC_DIR)/%.cpp,$(LOGS_OBJ_DIR)/%.o,$(LOGS_SRC_CPP))
 
-TARGET = $(BUILD_DIR)/hash_table
+TARGET = $(BUILD_DIR)/hash_table_test
 
 LDFLAGS  = -D _DEBUG -ggdb3 -std=c++17 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat -Wmissing-declarations -Wcast-align -Wcast-qual                	\
  -Wchar-subscripts -Wconditionally-supported -Wconversion -Wctor-dtor-privacy -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness               \
@@ -87,7 +87,7 @@ run:
 gdb:
 	make rebuild USE_GDB=true OPT_LEVEL=-O0 && gdb $(TARGET)
 
-callgrind:
+valgrind:
 	make rebuild USE_VALGRIND=true && valgrind $(VALGRIND_FLAGS) $(TARGET)
 
 r2:
@@ -125,3 +125,5 @@ $(LOGS_OBJ_DIR):
 
 $(BUILD_DIR):
 	mkdir -p $@
+
+

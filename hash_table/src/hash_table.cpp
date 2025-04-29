@@ -174,6 +174,17 @@ BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
             if (cmp_mask_bits == -1)    // -1 = 0xFFF..F  (bytes are equal => bit in mask)
             {
                 item->val++;
+
+                // if (item->val >= ((BucketItem *) ListGetItem(bucket, bucket->prev[item_index]))->val && bucket->prev[item_index] != 0)
+                // {
+                //     int new_prev_index = bucket->prev[bucket->prev[item_index]];
+                //     int new_next_index = bucket->prev[item_index];
+
+                //     ListBind(bucket, new_next_index, bucket->next[item_index]);
+                //     ListBind(bucket, new_prev_index, item_index);
+                //     ListBind(bucket, item_index,     new_next_index);
+                // }
+
                 return item;
             }
 
@@ -213,16 +224,8 @@ BucketItem *FindItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
 
             BucketItem *item = (BucketItem *) ListGetItem(bucket, item_index);
 
-            // fprintf(stderr, "word_m256 = %s, item->word = %s\n\n", word_m256, &item->word);
-            
-            // __m256i item_word_aligned = item->word; //_mm256_loadu_si256(&item->word);
-            // memcpy(&item_word_aligned, &item->word, sizeof(__m256i));
-
-            // fprintf(stderr, "ptr = [%p]\n", &item_word_aligned);
             __m256i cmp_256   = _mm256_cmpeq_epi8(word_m256, item->word);
             int cmp_mask_bits = _mm256_movemask_epi8(cmp_256);
-
-            // log(INFO, "loadItem: w1 = '%s', w2 = '%s', cmp_mask_bits = %d\n", word_m256, &item->word, cmp_mask_bits);
 
             if (cmp_mask_bits == -1)    // -1 = 0xFFF..F  (bytes are equal => bit in mask)
                 return item;
