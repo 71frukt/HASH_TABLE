@@ -198,3 +198,17 @@ size_t YMM_HashFunc(const __m256i data)
 
     return result;
 }
+
+size_t Crc32(const __m256i str_256)
+{
+    uint64_t data[4];
+    _mm256_storeu_si256((__m256i*)data, str_256);
+
+    uint32_t hash = 0xFFFFFFFF;
+
+    for (int i = 0; i < 4; i++)
+        hash = _mm_crc32_u64(hash, data[i]);
+
+    hash ^= 0xFFFFFFFF;
+    return hash;
+}

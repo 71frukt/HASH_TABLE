@@ -153,7 +153,7 @@ BucketItem *LoadItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
 
     __m256i word_m256 = _mm256_loadu_si256(word_m256_ptr);
 
-    size_t word_hash  = YMM_HashFunc(word_m256);
+    size_t word_hash  = Crc32(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;
@@ -209,7 +209,7 @@ BucketItem *FindItem(HashTable *hash_table, const __m256i *const word_m256_ptr)
 {
     __m256i word_m256 = _mm256_loadu_si256(word_m256_ptr);
 
-    size_t word_hash  = YMM_HashFunc(word_m256);
+    size_t word_hash  = Crc32(word_m256);
     size_t bucket_num = word_hash % hash_table->buckets_count;
 
     list_t *bucket = hash_table->buckets + bucket_num;
